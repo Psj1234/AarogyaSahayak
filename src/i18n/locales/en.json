@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "home": "Home",
+    "vitals": "Vitals",
+    "reminders": "Reminders",
+    "connect": "Connect",
+    "feed": "Health Feed"
+  },
+  "home": {
+    "title": "Your Digital Health Companion",
+    "subtitle": "Comprehensive health tracking, expert connectivity, and personalized wellness guidance in your pocket",
+    "getStarted": "Get Started",
+    "features": {
+      "title": "Comprehensive Health Management",
+      "onboarding": {
+        "title": "Smart Onboarding",
+        "desc": "Personalized setup for your health journey"
+      },
+      "vitals": {
+        "title": "Vitals Tracking",
+        "desc": "Monitor blood sugar, BP, and weight with AI insights"
+      },
+      "reminders": {
+        "title": "Smart Reminders",
+        "desc": "Never miss medications or checkups"
+      },
+      "connect": {
+        "title": "ASHA Connect",
+        "desc": "Direct access to certified health workers"
+      },
+      "feed": {
+        "title": "Health Feed",
+        "desc": "Personalized tips and wellness content"
+      }
+    }
+  },
+  "onboarding": {
+    "title": "Let's Set Up Your Health Profile",
+    "subtitle": "Help us personalize your experience",
+    "name": "Full Name",
+    "age": "Age",
+    "condition": "Health Condition",
+    "conditionOptions": {
+      "none": "None",
+      "diabetes": "Diabetes",
+      "hypertension": "Hypertension",
+      "both": "Both"
+    },
+    "language": "Preferred Language",
+    "ashaId": "Local ASHA Worker ID (Optional)",
+    "phone": "Phone Number",
+    "save": "Save Profile",
+    "success": "Profile saved successfully!"
+  },
+  "vitals": {
+    "title": "Daily Vitals Tracking",
+    "subtitle": "Monitor your health metrics",
+    "glucose": "Blood Glucose (mg/dL)",
+    "bloodPressure": "Blood Pressure",
+    "systolic": "Systolic",
+    "diastolic": "Diastolic",
+    "weight": "Weight (kg)",
+    "bmi": "BMI",
+    "log": "Log Vitals",
+    "predict": "Predict Risk",
+    "trends": "Health Trends",
+    "days7": "7 Days",
+    "days30": "30 Days",
+    "riskScore": "Risk Assessment",
+    "lowRisk": "Low Risk",
+    "moderateRisk": "Moderate Risk",
+    "highRisk": "High Risk",
+    "success": "Vitals logged successfully!"
+  },
+  "reminders": {
+    "title": "Health Reminders",
+    "subtitle": "Stay on track with your health routine",
+    "add": "Add Reminder",
+    "medication": "Medication",
+    "checkup": "Checkup",
+    "exercise": "Exercise",
+    "time": "Time",
+    "frequency": "Frequency",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "save": "Save Reminder",
+    "delete": "Delete",
+    "noReminders": "No reminders set",
+    "success": "Reminder saved successfully!"
+  },
+  "connect": {
+    "title": "Connect with ASHA Workers",
+    "subtitle": "Get expert health guidance",
+    "call": "Call",
+    "message": "Message",
+    "available": "Available",
+    "busy": "Busy",
+    "offline": "Offline"
+  },
+  "feed": {
+    "title": "Your Health Feed",
+    "subtitle": "Personalized wellness content",
+    "playAudio": "Play Audio",
+    "pauseAudio": "Pause Audio",
+    "categories": {
+      "diet": "Diet & Nutrition",
+      "exercise": "Exercise & Fitness",
+      "tips": "Health Tips"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "back": "Back",
+    "next": "Next"
+  }
+}
