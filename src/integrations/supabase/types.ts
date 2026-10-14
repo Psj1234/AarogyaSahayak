@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
@@ -17,8 +15,9 @@ export type Database = {
       asha_profiles: {
         Row: {
           created_at: string
-          experience_years: number | null
+          experience_years: number
           id: string
+          is_verified: boolean
           location: string | null
           qualification: string | null
           specialization: string | null
@@ -28,8 +27,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          experience_years?: number | null
+          experience_years?: number
           id?: string
+          is_verified?: boolean
           location?: string | null
           qualification?: string | null
           specialization?: string | null
@@ -39,8 +39,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          experience_years?: number | null
+          experience_years?: number
           id?: string
+          is_verified?: boolean
           location?: string | null
           qualification?: string | null
           specialization?: string | null
@@ -58,7 +59,7 @@ export type Database = {
           id: string
           patient_id: string
           request_type: string
-          status: string | null
+          status: Database["public"]["Enums"]["request_status"]
           updated_at: string
         }
         Insert: {
@@ -67,8 +68,8 @@ export type Database = {
           description?: string | null
           id?: string
           patient_id: string
-          request_type: string
-          status?: string | null
+          request_type?: string
+          status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
         }
         Update: {
@@ -78,7 +79,7 @@ export type Database = {
           id?: string
           patient_id?: string
           request_type?: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
           updated_at?: string
         }
         Relationships: []
@@ -116,6 +117,75 @@ export type Database = {
         }
         Relationships: []
       }
+      reminders: {
+        Row: {
+          category: Database["public"]["Enums"]["reminder_category"]
+          created_at: string
+          frequency: Database["public"]["Enums"]["reminder_frequency"]
+          id: string
+          is_active: boolean
+          patient_id: string
+          time: string
+          title: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["reminder_category"]
+          created_at?: string
+          frequency?: Database["public"]["Enums"]["reminder_frequency"]
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          time: string
+          title?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["reminder_category"]
+          created_at?: string
+          frequency?: Database["public"]["Enums"]["reminder_frequency"]
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          time?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      vitals: {
+        Row: {
+          bmi: number | null
+          created_at: string
+          diastolic_bp: number | null
+          glucose: number | null
+          id: string
+          patient_id: string
+          risk_level: Database["public"]["Enums"]["risk_level_type"] | null
+          systolic_bp: number | null
+          weight: number | null
+        }
+        Insert: {
+          bmi?: number | null
+          created_at?: string
+          diastolic_bp?: number | null
+          glucose?: number | null
+          id?: string
+          patient_id: string
+          risk_level?: Database["public"]["Enums"]["risk_level_type"] | null
+          systolic_bp?: number | null
+          weight?: number | null
+        }
+        Update: {
+          bmi?: number | null
+          created_at?: string
+          diastolic_bp?: number | null
+          glucose?: number | null
+          id?: string
+          patient_id?: string
+          risk_level?: Database["public"]["Enums"]["risk_level_type"] | null
+          systolic_bp?: number | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -125,6 +195,10 @@ export type Database = {
     }
     Enums: {
       user_role: "patient" | "asha_worker"
+      request_status: "pending" | "accepted" | "rejected" | "completed"
+      risk_level_type: "low" | "medium" | "moderate" | "high"
+      reminder_category: "medication" | "checkup" | "exercise"
+      reminder_frequency: "daily" | "weekly" | "monthly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -253,6 +327,10 @@ export const Constants = {
   public: {
     Enums: {
       user_role: ["patient", "asha_worker"],
+      request_status: ["pending", "accepted", "rejected", "completed"],
+      risk_level_type: ["low", "medium", "moderate", "high"],
+      reminder_category: ["medication", "checkup", "exercise"],
+      reminder_frequency: ["daily", "weekly", "monthly"],
     },
   },
 } as const

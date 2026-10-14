@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Volume2, Heart, Utensils, Dumbbell, Info } from 'lucide-react';
+import { Play, Pause, Volume2, Heart, Utensils, Dumbbell, Info, VolumeX, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 interface HealthContent {
   id: string;
@@ -20,31 +21,56 @@ interface HealthContent {
 
 const HealthFeed: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
+  const [playbackType, setPlaybackType] = useState<'stream' | 'speech' | null>(null);
 
-  // Mock health content data - in production this would be dynamic based on user profile and language
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Stop any active audio / speech playback
+  const stopAllPlayback = () => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current.currentTime = 0;
+      activeAudioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setPlayingAudio(null);
+    setPlaybackType(null);
+  };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      stopAllPlayback();
+    };
+  }, []);
+
+  // Health content data localized
   const healthContent: HealthContent[] = [
     {
       id: '1',
       title: i18n.language === 'hi' ? 'मधुमेह के लिए स्वस्थ आहार' : 'Healthy Diet for Diabetes',
       content: i18n.language === 'hi' 
-        ? 'मधुमेह को नियंत्रित करने के लिए संतुलित आहार बहुत महत्वपूर्ण है। पूरे अनाज, दुबला प्रोटीन, और फाइबर युक्त सब्जियों को शामिल करें। चीनी और प्रसंस्कृत खाद्य पदार्थों से बचें।'
+        ? 'मधुमेह को नियंत्रित करने के लिए संतुलित आहार बहुत महत्वपूर्ण है। साबुत अनाज, दालें, और हरी पत्तेदार सब्जियां शामिल करें। मीठी चीजों और तले हुए भोजन से बचें। समय पर भोजन करें।'
         : 'A balanced diet is crucial for managing diabetes. Include whole grains, lean proteins, and fiber-rich vegetables. Avoid sugary and processed foods. Monitor portion sizes and eat at regular intervals.',
       category: 'diet',
-      duration: '3:45',
+      duration: '1:45',
       tags: ['Diabetes', 'Nutrition', 'Blood Sugar'],
       readTime: '2 min',
-      audioUrl: '/demo-audio-diet.mp3' // Demo audio file
+      audioUrl: '/demo-audio-diet.mp3'
     },
     {
       id: '2',
       title: i18n.language === 'hi' ? 'उच्च रक्तचाप के लिए व्यायाम' : 'Exercise for High Blood Pressure',
       content: i18n.language === 'hi'
-        ? 'नियमित व्यायाम रक्तचाप को कम करने में मदद करता है। दिन में 30 मिनट का तेज चलना, तैराकी, या साइक्लिंग करें। धीरे-धीरे शुरू करें और अपनी सीमा के अनुसार बढ़ाएं।'
+        ? 'नियमित व्यायाम रक्तचाप को सामान्य रखने में मदद करता है। दिन में 30 मिनट तेज गति से चलें, योग करें या प्राणायाम करें। अधिक तनाव से बचें और पर्याप्त नींद लें।'
         : 'Regular exercise helps lower blood pressure. Aim for 30 minutes of brisk walking, swimming, or cycling daily. Start slowly and gradually increase intensity based on your fitness level.',
       category: 'exercise',
-      duration: '4:20',
+      duration: '2:10',
       tags: ['Hypertension', 'Cardio', 'Fitness'],
       readTime: '3 min',
       audioUrl: '/demo-audio-exercise.mp3'
@@ -53,22 +79,22 @@ const HealthFeed: React.FC = () => {
       id: '3',
       title: i18n.language === 'hi' ? 'दवाइयों को समय पर लेने के फायदे' : 'Benefits of Taking Medications on Time',
       content: i18n.language === 'hi'
-        ? 'दवाइयों को निर्धारित समय पर लेना बहुत महत्वपूर्ण है। यह दवा की प्रभावशीलता बनाए रखता है और दुष्प्रभावों को कम करता है। रिमाइंडर सेट करें और दवा कैलेंडर का उपयोग करें।'
+        ? 'दवाइयों को डॉक्टर के परामर्श अनुसार सही समय पर लेना आवश्यक है। इससे रक्तचाप और शुगर का स्तर स्थिर रहता है। अपने मोबाइल में रिमाइंडर लगाएं ताकि खुराक न छूटे।'
         : 'Taking medications at prescribed times is crucial for effectiveness. It maintains proper drug levels in your body and reduces side effects. Set reminders and use a medication calendar.',
       category: 'tips',
-      duration: '2:30',
+      duration: '1:30',
       tags: ['Medication', 'Adherence', 'Health Management'],
       readTime: '2 min',
       audioUrl: '/demo-audio-tips.mp3'
     },
     {
       id: '4',
-      title: i18n.language === 'hi' ? 'हाइड्रेशन का महत्व' : 'Importance of Staying Hydrated',
+      title: i18n.language === 'hi' ? 'हाइड्रेशन और पानी का महत्व' : 'Importance of Staying Hydrated',
       content: i18n.language === 'hi'
-        ? 'पर्याप्त पानी पीना स्वास्थ्य के लिए आवश्यक है। यह शरीर के तापमान को नियंत्रित करता है, जोड़ों को चिकना रखता है, और पोषक तत्वों को पहुंचाने में मदद करता है।'
+        ? 'पर्याप्त पानी पीना शरीर के तापमान को नियंत्रित करता है, पाचन क्रिया सुधारता है और गुर्दों को स्वस्थ रखता है। प्रतिदिन 8 से 10 गिलास पानी अवश्य पिएं।'
         : 'Adequate water intake is essential for health. It regulates body temperature, lubricates joints, and helps transport nutrients. Aim for 8-10 glasses daily.',
       category: 'tips',
-      duration: '3:15',
+      duration: '1:20',
       tags: ['Hydration', 'Wellness', 'Daily Health'],
       readTime: '2 min'
     }
@@ -92,25 +118,94 @@ const HealthFeed: React.FC = () => {
     }
   };
 
-  const handleAudioPlayPause = (contentId: string, audioUrl?: string) => {
-    if (!audioUrl) {
-      // Demo: Show that audio would play here
-      alert(`${t('feed.playAudio')} - ${t('common.loading')}...`);
+  // Robust Text-to-Speech fallback using Web Speech API
+  const playWithSpeechSynthesis = (item: HealthContent) => {
+    if (!('speechSynthesis' in window)) {
+      toast({
+        title: 'Audio Unavailable',
+        description: 'Text-to-speech is not supported by your browser.',
+        variant: 'destructive'
+      });
+      setPlayingAudio(null);
       return;
     }
 
-    // In a real implementation, this would handle actual audio playback
-    if (playingAudio === contentId) {
+    window.speechSynthesis.cancel();
+
+    const fullText = `${item.title}. ${item.content}`;
+    const utterance = new SpeechSynthesisUtterance(fullText);
+    speechUtteranceRef.current = utterance;
+
+    // Set voice language according to current language
+    utterance.lang = i18n.language === 'hi' ? 'hi-IN' : 'en-IN';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => {
+      setPlayingAudio(item.id);
+      setPlaybackType('speech');
+    };
+
+    utterance.onend = () => {
       setPlayingAudio(null);
-      console.log(`Pausing audio for content ${contentId}`);
-    } else {
-      setPlayingAudio(contentId);
-      console.log(`Playing audio for content ${contentId}: ${audioUrl}`);
-      
-      // Demo: Auto-pause after 3 seconds
-      setTimeout(() => {
+      setPlaybackType(null);
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis error:', e);
+      setPlayingAudio(null);
+      setPlaybackType(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+    toast({
+      title: 'Voice Assistant Playing',
+      description: `Reading aloud "${item.title}" in ${i18n.language === 'hi' ? 'Hindi' : 'English'}.`
+    });
+  };
+
+  // Unified Play/Pause Handler (Audio stream with speech fallback)
+  const handleAudioPlayPause = (item: HealthContent) => {
+    // If clicking on currently playing item, toggle pause/stop
+    if (playingAudio === item.id) {
+      stopAllPlayback();
+      return;
+    }
+
+    // Stop whatever else was playing
+    stopAllPlayback();
+
+    // If an audio file URL is specified, attempt standard streaming playback
+    if (item.audioUrl) {
+      const audio = new Audio(item.audioUrl);
+      activeAudioRef.current = audio;
+
+      audio.onplay = () => {
+        setPlayingAudio(item.id);
+        setPlaybackType('stream');
+      };
+
+      audio.onended = () => {
         setPlayingAudio(null);
-      }, 3000);
+        setPlaybackType(null);
+        activeAudioRef.current = null;
+      };
+
+      // Graceful fallback to Speech Synthesis if audio file is missing or 404
+      audio.onerror = () => {
+        console.log(`Media file '${item.audioUrl}' not found. Falling back to native speech synthesis.`);
+        activeAudioRef.current = null;
+        playWithSpeechSynthesis(item);
+      };
+
+      audio.play().catch(() => {
+        // Autoplay restrictions or missing source: fallback to Speech Synthesis
+        activeAudioRef.current = null;
+        playWithSpeechSynthesis(item);
+      });
+    } else {
+      // No audio file specified: read aloud directly via Speech Synthesis
+      playWithSpeechSynthesis(item);
     }
   };
 
@@ -131,7 +226,7 @@ const HealthFeed: React.FC = () => {
                 <CategoryIcon className="h-4 w-4" />
               </div>
               <Badge variant="secondary" className="text-xs">
-                {t(`feed.categories.${content.category}`)}
+                {t(`feed.categories.${content.category}`) || content.category}
               </Badge>
             </div>
             <div className="text-xs text-muted-foreground">
@@ -158,37 +253,42 @@ const HealthFeed: React.FC = () => {
           </div>
           
           {/* Audio Controls */}
-          {content.audioUrl && (
-            <div className="flex items-center justify-between bg-accent/50 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Audio Version</span>
-                {content.duration && (
-                  <span className="text-xs text-muted-foreground">
-                    {content.duration}
-                  </span>
-                )}
+          <div className="flex items-center justify-between bg-accent/40 rounded-lg p-3 border border-border/40">
+            <div className="flex items-center gap-2">
+              <Volume2 className={`h-4 w-4 ${isPlaying ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
+              <div>
+                <span className="text-xs font-semibold block text-foreground">
+                  {isPlaying 
+                    ? (playbackType === 'speech' ? 'Reading Aloud...' : 'Playing Audio...') 
+                    : 'Listen to Article'}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {content.duration || 'Audio narration'}
+                </span>
               </div>
-              
-              <Button
-                size="sm"
-                onClick={() => handleAudioPlayPause(content.id, content.audioUrl)}
-                className="bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-1" />
-                    {t('feed.pauseAudio')}
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-1" />
-                    {t('feed.playAudio')}
-                  </>
-                )}
-              </Button>
             </div>
-          )}
+            
+            <Button
+              size="sm"
+              onClick={() => handleAudioPlayPause(content)}
+              className={isPlaying 
+                ? 'bg-destructive/10 text-destructive hover:bg-destructive/20 h-8 text-xs' 
+                : 'bg-primary/10 text-primary hover:bg-primary/20 h-8 text-xs'
+              }
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="h-3.5 w-3.5 mr-1" />
+                  {t('feed.pauseAudio') || 'Pause'}
+                </>
+              ) : (
+                <>
+                  <Play className="h-3.5 w-3.5 mr-1" />
+                  {t('feed.playAudio') || 'Listen'}
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -199,66 +299,89 @@ const HealthFeed: React.FC = () => {
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">
-            {t('feed.title')}
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            {t('feed.title') || 'Health Education & Feed'}
           </h1>
-          <p className="text-muted-foreground">
-            {t('feed.subtitle')}
+          <p className="text-muted-foreground text-sm">
+            {t('feed.subtitle') || 'Daily health tips and verified guidance for rural wellness'}
           </p>
         </div>
 
+        {/* Global Playing Banner */}
+        {playingAudio && (
+          <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2.5">
+              <Volume2 className="h-5 w-5 text-primary animate-bounce" />
+              <div>
+                <p className="text-xs font-semibold text-primary">Now Playing Audio Narration</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {playbackType === 'speech' ? 'Native Text-to-Speech active' : 'Media stream active'}
+                </p>
+              </div>
+            </div>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={stopAllPlayback} 
+              className="h-7 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <VolumeX className="h-4 w-4 mr-1" />
+              Stop
+            </Button>
+          </div>
+        )}
+
         {/* Content Tabs */}
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4 h-9">
             <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
             <TabsTrigger value="diet" className="text-xs">
-              {t('feed.categories.diet').split(' ')[0]}
+              {t('feed.categories.diet')?.split(' ')[0] || 'Diet'}
             </TabsTrigger>
             <TabsTrigger value="exercise" className="text-xs">
-              {t('feed.categories.exercise').split(' ')[0]}
+              {t('feed.categories.exercise')?.split(' ')[0] || 'Exercise'}
             </TabsTrigger>
             <TabsTrigger value="tips" className="text-xs">
-              {t('feed.categories.tips').split(' ')[1] || 'Tips'}
+              {t('feed.categories.tips')?.split(' ')[1] || 'Tips'}
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="all" className="space-y-4 mt-6">
+          <TabsContent value="all" className="space-y-4 mt-4">
             {healthContent.map((content) => (
               <ContentCard key={content.id} content={content} />
             ))}
           </TabsContent>
           
-          <TabsContent value="diet" className="space-y-4 mt-6">
+          <TabsContent value="diet" className="space-y-4 mt-4">
             {filterContentByCategory('diet').map((content) => (
               <ContentCard key={content.id} content={content} />
             ))}
           </TabsContent>
           
-          <TabsContent value="exercise" className="space-y-4 mt-6">
+          <TabsContent value="exercise" className="space-y-4 mt-4">
             {filterContentByCategory('exercise').map((content) => (
               <ContentCard key={content.id} content={content} />
             ))}
           </TabsContent>
           
-          <TabsContent value="tips" className="space-y-4 mt-6">
+          <TabsContent value="tips" className="space-y-4 mt-4">
             {filterContentByCategory('tips').map((content) => (
               <ContentCard key={content.id} content={content} />
             ))}
           </TabsContent>
         </Tabs>
 
-        {/* Audio Demo Note */}
+        {/* Audio Feature Note */}
         <Card className="shadow-card border-border/50 bg-accent/30">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <Volume2 className="h-5 w-5 text-primary mt-0.5" />
+              <Sparkles className="h-5 w-5 text-primary mt-0.5" />
               <div>
-                <h4 className="font-medium text-foreground mb-1">
-                  Audio Content
+                <h4 className="font-medium text-foreground mb-1 text-sm">
+                  Voice Accessibility Support
                 </h4>
-                <p className="text-sm text-muted-foreground">
-                  {/* TODO: Implement real audio file loading and playback */}
-                  Audio versions of health content will be available with proper audio file integration. This demo shows the interface design.
+                <p className="text-xs text-muted-foreground">
+                  All articles support real-time audio playback in Hindi and English. If you have trouble reading, simply tap "Listen" on any health article.
                 </p>
               </div>
             </div>
