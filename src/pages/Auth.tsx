@@ -74,7 +74,7 @@ const Auth: React.FC = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: signupData.email,
         password: signupData.password,
         options: {
@@ -88,36 +88,37 @@ const Auth: React.FC = () => {
       });
 
       if (error) {
-        toast({
-          title: 'Signup Failed',
-          description: error.message,
-          variant: 'destructive'
-        });
-      } else {
-        // If ASHA worker, create ASHA profile
-        if (signupData.role === 'asha_worker') {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from('asha_profiles').insert({
-              user_id: user.id,
-              worker_id: signupData.workerId,
-              experience_years: parseInt(signupData.experienceYears) || 0,
-              specialization: signupData.specialization,
-              location: signupData.location,
-              qualification: signupData.qualification
-            });
-          }
-        }
-
-        toast({
-          title: 'Account Created',
-          description: 'Please check your email to verify your account.'
-        });
+        throw error;
       }
-    } catch (error) {
+
+      // Check for email enumeration protection: existing user returns user with empty identities
+      if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('An account with this email already exists. Please log in instead.');
+      }
+
+      // If ASHA worker, create ASHA profile
+      if (signupData.role === 'asha_worker') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('asha_profiles').insert({
+            user_id: user.id,
+            worker_id: signupData.workerId,
+            experience_years: parseInt(signupData.experienceYears) || 0,
+            specialization: signupData.specialization,
+            location: signupData.location,
+            qualification: signupData.qualification
+          });
+        }
+      }
+
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
+        title: 'Account Created',
+        description: 'Please check your email to verify your account.'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Signup Failed',
+        description: error?.message || 'An unexpected error occurred',
         variant: 'destructive'
       });
     } finally {
