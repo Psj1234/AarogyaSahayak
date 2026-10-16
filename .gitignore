@@ -31,3 +31,8 @@ venv/
 .venv/
 env/
 ENV/
+
+# Playwright Test Output
+test-results/
+playwright-report/
+
