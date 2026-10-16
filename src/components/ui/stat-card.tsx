@@ -12,6 +12,7 @@ interface StatCardProps {
   trendValue?: string;
   className?: string;
   variant?: "default" | "success" | "warning" | "danger";
+  status?: "default" | "success" | "warning" | "danger" | "normal";
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -22,8 +23,13 @@ const StatCard: React.FC<StatCardProps> = ({
   trend,
   trendValue,
   className,
-  variant = "default"
+  variant = "default",
+  status
 }) => {
+  const resolvedVariant = variant !== "default" 
+    ? variant 
+    : (status === "normal" ? "success" : (status || "default"));
+
   const variantClasses = {
     default: "bg-gradient-card border-border",
     success: "bg-gradient-to-br from-success/10 to-success/5 border-success/20",

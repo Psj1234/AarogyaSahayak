@@ -122,9 +122,117 @@ const Vitals: React.FC = () => {
   const currentChartData = activeTab === '7days' ? chartData7Days : chartData30Days;
   const isUsingSampleData = vitals.length === 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const predictRisk = async (dataToPredict = formData): Promise<{ level: 'low' | 'moderate' | 'high'; score: number }> => {
+    const glucoseVal = parseFloat(dataToPredict.glucose);
+    const systolicVal = parseFloat(dataToPredict.systolic);
+    const diastolicVal = parseFloat(dataToPredict.diastolic);
+    const weightVal = parseFloat(dataToPredict.weight);
+    const bmiVal = weightVal ? parseFloat(calculateBMI(weightVal)) : undefined;
+
+    setRiskData(prev => ({ ...prev, loading: true } as any));
+
+    try {
+      const riskApiUrl = import.meta.env.VITE_RISK_API_URL || 'http://localhost:8000/predict_risk';
+      const response = await fetch(riskApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          glucose: isNaN(glucoseVal) ? 100 : glucoseVal,
+          systolic_bp: isNaN(systolicVal) ? 120 : systolicVal,
+          diastolic_bp: isNaN(diastolicVal) ? 80 : diastolicVal,
+          weight: isNaN(weightVal) ? undefined : weightVal,
+          bmi: bmiVal
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      let level: 'low' | 'moderate' | 'high' = 'low';
+      if (data.risk_level) {
+        const rawLevel = String(data.risk_level).toLowerCase();
+        if (rawLevel === 'high') level = 'high';
+        else if (rawLevel === 'moderate' || rawLevel === 'medium') level = 'moderate';
+        else level = 'low';
+      } else {
+        let score = data.risk_score ?? data.risk ?? data.score ?? 20;
+        if (score > 1) score = score / 100;
+        if (score > 0.7) level = 'high';
+        else if (score > 0.4) level = 'moderate';
+        else level = 'low';
+      }
+
+      const score = data.risk_score ?? (level === 'high' ? 85 : level === 'moderate' ? 55 : 20);
+      const result = { level, score };
+
+      setRiskData({ score, level, loading: false });
+      
+      toast({
+        title: "Risk Analysis Complete",
+        description: `Calculated risk level: ${level.toUpperCase()}`
+      });
+
+      return result;
+    } catch (error: any) {
+      console.warn('Risk prediction service offline or unreachable, using clinical heuristic fallback:', error);
+      
+      // Clinical rule-based heuristic fallback
+      let calculatedLevel: 'low' | 'moderate' | 'high' = 'low';
+      let calculatedScore = 20;
+
+      const g = isNaN(glucoseVal) ? 100 : glucoseVal;
+      const s = isNaN(systolicVal) ? 120 : systolicVal;
+
+      if (g >= 180 || s >= 140) {
+        calculatedLevel = 'high';
+        calculatedScore = 85;
+      } else if (g >= 140 || s >= 130) {
+        calculatedLevel = 'moderate';
+        calculatedScore = 55;
+      }
+
+      const fallbackResult = { score: calculatedScore, level: calculatedLevel };
+      setRiskData({ score: calculatedScore, level: calculatedLevel, loading: false });
+
+      toast({
+        title: "Health Risk Estimated",
+        description: `Estimated clinical risk level: ${calculatedLevel.toUpperCase()}`
+      });
+
+      return fallbackResult;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.glucose && !formData.systolic && !formData.weight) {
+      toast({
+        title: t('common.error') || 'Error',
+        description: "Please fill in at least one vital metric to save",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Auto-predict in background if riskData is not yet calculated
+    let resolvedRiskLevel = riskData?.level;
+    if (!resolvedRiskLevel) {
+      const prediction = await predictRisk(formData);
+      resolvedRiskLevel = prediction.level;
+    }
+
+    // Guaranteed fallback: risk level is never null
+    if (!resolvedRiskLevel) {
+      resolvedRiskLevel = 'low';
+    }
+
     const vital = {
       date: new Date().toISOString(),
       glucose: formData.glucose ? parseFloat(formData.glucose) : undefined,
@@ -132,19 +240,19 @@ const Vitals: React.FC = () => {
       diastolic: formData.diastolic ? parseFloat(formData.diastolic) : undefined,
       weight: formData.weight ? parseFloat(formData.weight) : undefined,
       bmi: formData.weight ? parseFloat(calculateBMI(parseFloat(formData.weight))) : undefined,
-      riskLevel: riskData ? (riskData.level as any) : undefined
+      riskLevel: resolvedRiskLevel
     };
 
-    addVital(vital);
+    await addVital(vital);
     setFormData({ glucose: '', systolic: '', diastolic: '', weight: '' });
     
     toast({
       title: t('vitals.success') || 'Vitals Recorded',
-      description: "Your health metrics have been saved and synced to your cloud account."
+      description: `Your health metrics have been saved with ${resolvedRiskLevel.toUpperCase()} risk classification.`
     });
   };
 
-  const predictRisk = async () => {
+  const handleManualPredictClick = () => {
     if (!formData.glucose || !formData.systolic || !formData.weight) {
       toast({
         title: t('common.error') || 'Error',
@@ -153,71 +261,7 @@ const Vitals: React.FC = () => {
       });
       return;
     }
-
-    setRiskData(prev => ({ ...prev, loading: true } as any));
-
-    try {
-      const riskApiUrl = import.meta.env.VITE_RISK_API_URL || 'https://health-uxaj.onrender.com/predict_risk';
-      const response = await fetch(riskApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          glucose: parseFloat(formData.glucose),
-          blood_pressure: parseFloat(formData.systolic),
-          bmi: parseFloat(calculateBMI(parseFloat(formData.weight)))
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API call failed: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      let score = data.risk_score ?? data.risk ?? data.prediction ?? data.score;
-      
-      if (score === undefined || score === null) {
-        const values = Object.values(data).filter(val => typeof val === 'number') as number[];
-        score = values.length > 0 ? values[0] : 0.25;
-      }
-      
-      if (score > 1) score = score / 100;
-      
-      let level: 'low' | 'moderate' | 'high' = 'low';
-      if (score > 0.7) level = 'high';
-      else if (score > 0.4) level = 'moderate';
-
-      setRiskData({ score: Math.round(score * 100), level, loading: false });
-      
-      toast({
-        title: "Risk Analysis Complete",
-        description: `Calculated risk level: ${level.toUpperCase()}`
-      });
-    } catch (error: any) {
-      console.warn('Risk prediction service error:', error);
-      // Fallback rule-based risk calculation
-      const g = parseFloat(formData.glucose);
-      const s = parseFloat(formData.systolic);
-      let calculatedLevel: 'low' | 'moderate' | 'high' = 'low';
-      let calculatedScore = 20;
-
-      if (g > 180 || s > 140) {
-        calculatedLevel = 'high';
-        calculatedScore = 80;
-      } else if (g > 140 || s > 130) {
-        calculatedLevel = 'moderate';
-        calculatedScore = 55;
-      }
-
-      setRiskData({ score: calculatedScore, level: calculatedLevel, loading: false });
-      toast({
-        title: "Health Risk Estimated",
-        description: `Estimated clinical risk level: ${calculatedLevel.toUpperCase()}`
-      });
-    }
+    predictRisk(formData);
   };
 
   const renderTrendCharts = (data: ChartPoint[], titlePrefix: string) => (
@@ -454,7 +498,7 @@ const Vitals: React.FC = () => {
                     value={`${vital.glucose} mg/dL`}
                     subtitle={new Date(vital.date).toLocaleDateString()}
                     icon={Droplets}
-                    status={vital.glucose > 140 ? 'warning' : 'normal'}
+                    variant={vital.glucose > 140 ? 'warning' : 'success'}
                   />
                 )}
                 {vital.systolic && vital.diastolic && (
@@ -463,7 +507,7 @@ const Vitals: React.FC = () => {
                     value={`${vital.systolic}/${vital.diastolic}`}
                     subtitle="mmHg"
                     icon={Heart}
-                    status={vital.systolic > 130 ? 'warning' : 'normal'}
+                    variant={vital.systolic > 130 ? 'warning' : 'success'}
                   />
                 )}
               </React.Fragment>
@@ -545,7 +589,7 @@ const Vitals: React.FC = () => {
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={predictRisk}
+                  onClick={handleManualPredictClick}
                   disabled={riskData?.loading}
                   className="flex-1 border-primary text-primary hover:bg-primary/5 h-9 text-xs"
                 >
